@@ -22,9 +22,13 @@ export default function ContentPage() {
 
   const handleSave = async (data: any) => {
     try {
-      const response = await fetch("/api/content", {
+      const token = localStorage.getItem("token")
+      const response = await fetch("http://localhost:5000/api/content", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(data),
       })
 
@@ -46,8 +50,12 @@ export default function ContentPage() {
     if (!confirm("Are you sure you want to delete this content?")) return
 
     try {
-      const response = await fetch(`/api/content/${id}`, {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`http://localhost:5000/api/content/${id}`, {
         method: "DELETE",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
       })
 
       if (!response.ok) throw new Error("Failed to delete content")

@@ -30,7 +30,12 @@ export function ContentList({ onEdit, onDelete, statusFilter }: ContentListProps
     const fetchContent = async () => {
       try {
         const query = statusFilter ? `?status=${statusFilter}` : ""
-        const response = await fetch(`/api/content${query}`)
+        const token = localStorage.getItem("token")
+        const response = await fetch(`http://localhost:5000/api/content${query}`, {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        })
         if (response.ok) {
           const data = await response.json()
           setItems(data)
