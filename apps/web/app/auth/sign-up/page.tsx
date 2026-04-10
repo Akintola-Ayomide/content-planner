@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useAuth } from "@/context/auth-context"
+import { api } from "@/lib/api-client"
 
 export default function SignUpPage() {
   const [fullName, setFullName] = useState("")
@@ -17,7 +18,7 @@ export default function SignUpPage() {
   const [repeatPassword, setRepeatPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const { login } = useAuth()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,20 +32,8 @@ export default function SignUpPage() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name: fullName }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || (errorData.errors && errorData.errors[0]?.msg) || "Failed to sign up")
-      }
-
-      const data = await response.json()
-      localStorage.setItem("token", data.token)
-      router.push("/dashboard")
+      const data = await api.post("/auth/register", { email, password, name: fullName })
+      login(data.token, data.user)
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {

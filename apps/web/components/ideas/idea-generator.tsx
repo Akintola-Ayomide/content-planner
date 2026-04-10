@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import { Sparkles } from "lucide-react"
+import { api } from "@/lib/api-client"
 
 interface Idea {
   id: string
@@ -39,26 +41,13 @@ export function IdeaGenerator({ onIdeaGenerated }: IdeaGeneratorProps) {
     setError(null)
 
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch("http://localhost:5000/api/ideas/generate", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          prompt,
-          contentType,
-          category,
-          tone,
-        }),
+      const idea = await api.post("/ideas/generate", {
+        prompt,
+        contentType,
+        category,
+        tone,
       })
-
-      if (!response.ok) {
-        throw new Error("Failed to generate idea")
-      }
-
-      const idea = await response.json()
+      
       onIdeaGenerated(idea)
       setPrompt("")
     } catch (err) {
@@ -69,48 +58,48 @@ export function IdeaGenerator({ onIdeaGenerated }: IdeaGeneratorProps) {
   }
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20 shadow-xl shadow-primary/5">
       <CardHeader>
-        <CardTitle>Generate New Idea</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-primary" />
+          Generate New Idea
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Prompt textarea */}
+      <CardContent className="space-y-6">
         <div>
-          <label className="text-sm font-medium text-foreground">What's your content idea about?</label>
+          <label className="text-sm font-semibold text-foreground/80">What's your content idea about?</label>
           <Textarea
             placeholder="Describe the topic or theme you want to create content about..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             disabled={loading}
-            className="mt-2"
+            className="mt-2 bg-background/50 border-primary/10 focus:border-primary/30 transition-all resize-none rounded-xl"
             rows={4}
           />
         </div>
 
-        {/* Content Type Select */}
-        <div>
-          <label className="text-sm font-medium text-foreground">Content Type</label>
-          <Select value={contentType} onValueChange={setContentType} disabled={loading}>
-            <SelectTrigger className="mt-2">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="blog-post">Blog Post</SelectItem>
-              <SelectItem value="social-media">Social Media Post</SelectItem>
-              <SelectItem value="video-script">Video Script</SelectItem>
-              <SelectItem value="newsletter">Newsletter</SelectItem>
-              <SelectItem value="podcast-episode">Podcast Episode</SelectItem>
-              <SelectItem value="infographic">Infographic</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Category and Tone */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="text-sm font-medium text-foreground">Category</label>
+            <label className="text-sm font-semibold text-foreground/80">Content Type</label>
+            <Select value={contentType} onValueChange={setContentType} disabled={loading}>
+              <SelectTrigger className="mt-2 bg-background/50 border-primary/10 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="blog-post">Blog Post</SelectItem>
+                <SelectItem value="social-media">Social Media Post</SelectItem>
+                <SelectItem value="video-script">Video Script</SelectItem>
+                <SelectItem value="newsletter">Newsletter</SelectItem>
+                <SelectItem value="podcast-episode">Podcast Episode</SelectItem>
+                <SelectItem value="infographic">Infographic</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold text-foreground/80">Category</label>
             <Select value={category} onValueChange={setCategory} disabled={loading}>
-              <SelectTrigger className="mt-2">
+              <SelectTrigger className="mt-2 bg-background/50 border-primary/10 rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -125,9 +114,9 @@ export function IdeaGenerator({ onIdeaGenerated }: IdeaGeneratorProps) {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-foreground">Tone</label>
+            <label className="text-sm font-semibold text-foreground/80">Tone</label>
             <Select value={tone} onValueChange={setTone} disabled={loading}>
-              <SelectTrigger className="mt-2">
+              <SelectTrigger className="mt-2 bg-background/50 border-primary/10 rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -141,12 +130,26 @@ export function IdeaGenerator({ onIdeaGenerated }: IdeaGeneratorProps) {
           </div>
         </div>
 
-        {/* Error message */}
-        {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+        {error && (
+          <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse"></span>
+            {error}
+          </div>
+        )}
 
-        {/* Generate button */}
-        <Button onClick={handleGenerate} disabled={loading || !prompt.trim()} className="w-full" size="lg">
-          {loading ? "Generating..." : "Generate Idea"}
+        <Button 
+          onClick={handleGenerate} 
+          disabled={loading || !prompt.trim()} 
+          className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+        >
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
+              Generating...
+            </div>
+          ) : (
+            "Generate AI Idea"
+          )}
         </Button>
       </CardContent>
     </Card>

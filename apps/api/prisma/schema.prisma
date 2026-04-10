@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  name      String?
+  contents  Content[]
+  ideas     Idea[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Content {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  excerpt     String?
+  content     String?
+  contentType String   @map("content_type")
+  ideaId      Int?     @map("idea_id")
+  idea        Idea?    @relation(fields: [ideaId], references: [id])
+  tags        String[] @default([])
+  status      String   @default("draft")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("content")
+}
+
+model Idea {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  user         User      @relation(fields: [userId], references: [id])
+  title        String
+  description  String?
+  contentType  String    @map("content_type")
+  category     String?
+  tone         String?
+  keyPoints    String[]  @default([]) @map("key_points")
+  callToAction String?   @map("call_to_action")
+  status       String    @default("draft")
+  contents     Content[]
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("ideas")
+}

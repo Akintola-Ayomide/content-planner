@@ -5,11 +5,11 @@ import { ContentEditor } from "@/components/content/content-editor"
 import { ContentList } from "@/components/content/content-list"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus } from "lucide-react"
+import { Plus, Sparkles, FileText, Calendar, CheckCircle2 } from "lucide-react"
+import { api } from "@/lib/api-client"
 
 export default function ContentPage() {
   const [isEditing, setIsEditing] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [refreshKey, setRefreshKey] = useState(0)
 
   const handleCreateNew = () => {
@@ -22,18 +22,7 @@ export default function ContentPage() {
 
   const handleSave = async (data: any) => {
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch("http://localhost:5000/api/content", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) throw new Error("Failed to save content")
-
+      await api.post("/content", data)
       setIsEditing(false)
       setRefreshKey((prev) => prev + 1)
     } catch (error) {
@@ -50,16 +39,7 @@ export default function ContentPage() {
     if (!confirm("Are you sure you want to delete this content?")) return
 
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch(`http://localhost:5000/api/content/${id}`, {
-        method: "DELETE",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        }
-      })
-
-      if (!response.ok) throw new Error("Failed to delete content")
-
+      await api.delete(`/content/${id}`)
       setRefreshKey((prev) => prev + 1)
     } catch (error) {
       console.error("Error deleting content:", error)
@@ -71,38 +51,55 @@ export default function ContentPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Your Content</h1>
-          <p className="text-muted-foreground mt-2">Manage all your created content</p>
+          <h1 className="text-4xl font-extrabold text-foreground tracking-tight">Your Content</h1>
+          <p className="text-muted-foreground mt-2 text-lg">Manage, refine, and orchestrate all your created pieces.</p>
         </div>
-        <Button onClick={handleCreateNew}>
-          <Plus className="w-4 h-4 mr-2" />
-          Create Content
+        <Button 
+          onClick={handleCreateNew} 
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Create New Content
         </Button>
       </div>
 
-      <Tabs defaultValue="all" onValueChange={(value) => setStatusFilter(value === "all" ? undefined : value)}>
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="draft">Drafts</TabsTrigger>
-          <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
-          <TabsTrigger value="published">Published</TabsTrigger>
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList className="bg-muted/50 p-1 rounded-2xl border border-primary/5 mb-8">
+          <TabsTrigger value="all" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
+            <Sparkles className="w-4 h-4 mr-2" />
+            All Content
+          </TabsTrigger>
+          <TabsTrigger value="draft" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
+            <FileText className="w-4 h-4 mr-2" />
+            Drafts
+          </TabsTrigger>
+          <TabsTrigger value="scheduled" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
+            <Calendar className="w-4 h-4 mr-2" />
+            Scheduled
+          </TabsTrigger>
+          <TabsTrigger value="published" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
+            <CheckCircle2 className="w-4 h-4 mr-2" />
+            Published
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="mt-6">
-          <ContentList key={refreshKey} onEdit={handleEdit} onDelete={handleDelete} />
-        </TabsContent>
-        <TabsContent value="draft" className="mt-6">
-          <ContentList key={refreshKey} onEdit={handleEdit} onDelete={handleDelete} statusFilter="draft" />
-        </TabsContent>
-        <TabsContent value="scheduled" className="mt-6">
-          <ContentList key={refreshKey} onEdit={handleEdit} onDelete={handleDelete} statusFilter="scheduled" />
-        </TabsContent>
-        <TabsContent value="published" className="mt-6">
-          <ContentList key={refreshKey} onEdit={handleEdit} onDelete={handleDelete} statusFilter="published" />
-        </TabsContent>
+        <div className="mt-2">
+          <TabsContent value="all" className="focus-visible:outline-none focus-visible:ring-0">
+            <ContentList key={`all-${refreshKey}`} onEdit={handleEdit} onDelete={handleDelete} />
+          </TabsContent>
+          <TabsContent value="draft" className="focus-visible:outline-none focus-visible:ring-0">
+            <ContentList key={`draft-${refreshKey}`} onEdit={handleEdit} onDelete={handleDelete} statusFilter="draft" />
+          </TabsContent>
+          <TabsContent value="scheduled" className="focus-visible:outline-none focus-visible:ring-0">
+            <ContentList key={`scheduled-${refreshKey}`} onEdit={handleEdit} onDelete={handleDelete} statusFilter="scheduled" />
+          </TabsContent>
+          <TabsContent value="published" className="focus-visible:outline-none focus-visible:ring-0">
+            <ContentList key={`published-${refreshKey}`} onEdit={handleEdit} onDelete={handleDelete} statusFilter="published" />
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   )

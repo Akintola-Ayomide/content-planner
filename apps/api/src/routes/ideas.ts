@@ -1,41 +1,48 @@
-import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { Router, Response } from 'express';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-let ideasData: any[] = [];
-
-router.get('/', authenticateToken, (req, res) => {
-  // @ts-ignore
-  const user_id = req.user.id;
-  const userIdeas = ideasData.filter(idea => idea.user_id === user_id);
-  res.json(userIdeas);
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user.id;
+  try {
+    const ideas = await prisma.idea.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(ideas);
+  } catch (error) {
+    console.error('Error fetching ideas:', error);
+    res.status(500).json({ message: 'Failed to fetch ideas' });
+  }
 });
 
-router.post('/generate', authenticateToken, async (req, res) => {
+router.post('/generate', authenticateToken, async (req: AuthRequest, res: Response) => {
   const { prompt, contentType, category, tone } = req.body;
-  
-  // @ts-ignore
-  const user_id = req.user.id;
+  const userId = req.user.id;
 
-  // Mocked AI generation for now to avoid ai/zod dependency errors in our simplified backend
-  const newIdea = {
-    id: ideasData.length + 1,
-    user_id,
-    title: `Generated ${contentType}: ${prompt?.substring(0, 20)}...`,
-    description: `This is a mock generated description for ${category} with tone ${tone}`,
-    content_type: contentType,
-    category,
-    tone,
-    key_points: ['Point 1', 'Point 2', 'Point 3'],
-    call_to_action: 'Subscribe now!',
-    status: 'draft',
-    created_at: new Date().toISOString(),
-  };
+  try {
+    // Mocked AI generation for now, but saving to real DB
+    const newIdea = await prisma.idea.create({
+      data: {
+        userId,
+        title: `Generated ${contentType}: ${prompt?.substring(0, 20)}...`,
+        description: `This is a mock generated description for ${category} with tone ${tone}`,
+        contentType,
+        category: category || 'general',
+        tone: tone || 'informative',
+        keyPoints: ['Point 1', 'Point 2', 'Point 3'],
+        callToAction: 'Subscribe now!',
+        status: 'draft',
+      },
+    });
 
-  ideasData.push(newIdea);
-
-  res.status(201).json(newIdea);
+    res.status(201).json(newIdea);
+  } catch (error) {
+    console.error('Error generating idea:', error);
+    res.status(500).json({ message: 'Failed to generate and save idea' });
+  }
 });
 
 export default router;

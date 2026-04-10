@@ -1,77 +1,103 @@
-import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { Router, Response } from 'express';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-// Mock Data
-let contents: any[] = [];
-
 // GET Content
-router.get('/', authenticateToken, (req, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   const { status, type } = req.query;
-  
-  let result = [...contents];
-  // @ts-ignore
-  if (req.user && req.user.id) {
-    // @ts-ignore
-    result = result.filter(c => c.user_id === req.user.id);
+  const userId = req.user.id;
+
+  try {
+    const contents = await prisma.content.findMany({
+      where: {
+        userId,
+        ...(status && { status: String(status) }),
+        ...(type && { contentType: String(type) }),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(contents);
+  } catch (error) {
+    console.error('Error fetching content:', error);
+    res.status(500).json({ message: 'Failed to fetch content' });
   }
-
-  if (status) result = result.filter(c => c.status === status);
-  if (type) result = result.filter(c => c.content_type === type);
-
-  result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-  res.json(result);
 });
 
 // POST Content
-router.post('/', authenticateToken, (req, res) => {
+router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   const { title, excerpt, content, content_type, idea_id, tags } = req.body;
+  const userId = req.user.id;
 
-  // @ts-ignore
-  const user_id = req.user.id;
-
-  const newContent = {
-    id: contents.length + 1,
-    user_id,
-    title,
-    excerpt,
-    content,
-    content_type,
-    idea_id,
-    tags: tags || [],
-    status: 'draft',
-    created_at: new Date().toISOString(),
-  };
-
-  contents.push(newContent);
-  res.status(201).json(newContent);
+  try {
+    const newContent = await prisma.content.create({
+      data: {
+        userId,
+        title,
+        excerpt,
+        content,
+        contentType: content_type,
+        ideaId: idea_id ? parseInt(idea_id) : null,
+        tags: tags || [],
+        status: 'draft',
+      },
+    });
+    res.status(201).json(newContent);
+  } catch (error) {
+    console.error('Error creating content:', error);
+    res.status(500).json({ message: 'Failed to create content' });
+  }
 });
 
 // GET By ID
-router.get('/:id', authenticateToken, (req, res) => {
-  const content = contents.find(c => c.id === parseInt(req.params.id));
-  if (!content) return res.status(404).json({ message: 'Content not found' });
-  res.json(content);
+router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user.id;
+  const contentId = parseInt(req.params.id);
+
+  try {
+    const content = await prisma.content.findFirst({
+      where: { id: contentId, userId },
+    });
+    if (!content) return res.status(404).json({ message: 'Content not found' });
+    res.json(content);
+  } catch (error) {
+    console.error('Error fetching content by ID:', error);
+    res.status(500).json({ message: 'Failed to fetch content' });
+  }
 });
 
 // PATCH Content
-router.patch('/:id', authenticateToken, (req, res) => {
-  const index = contents.findIndex(c => c.id === parseInt(req.params.id));
-  if (index === -1) return res.status(404).json({ message: 'Content not found' });
+router.patch('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user.id;
+  const contentId = parseInt(req.params.id);
 
-  contents[index] = { ...contents[index], ...req.body, updated_at: new Date().toISOString() };
-  res.json(contents[index]);
+  try {
+    const updatedContent = await prisma.content.update({
+      where: { id: contentId, userId },
+      data: req.body,
+    });
+    res.json(updatedContent);
+  } catch (error) {
+    console.error('Error updating content:', error);
+    res.status(500).json({ message: 'Failed to update content' });
+  }
 });
 
 // DELETE Content
-router.delete('/:id', authenticateToken, (req, res) => {
-  const index = contents.findIndex(c => c.id === parseInt(req.params.id));
-  if (index === -1) return res.status(404).json({ message: 'Content not found' });
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user.id;
+  const contentId = parseInt(req.params.id);
 
-  contents.splice(index, 1);
-  res.status(204).send();
+  try {
+    await prisma.content.delete({
+      where: { id: contentId, userId },
+    });
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting content:', error);
+    res.status(500).json({ message: 'Failed to delete content' });
+  }
 });
 
 export default router;
